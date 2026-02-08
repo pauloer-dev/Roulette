@@ -1,0 +1,599 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Mirror Terminal Tool (Roulette)</title>
+  <style>
+    :root{
+      font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color-scheme: dark;
+      --bg:#0b0f14;
+      --card:#121a23;
+      --card2:#0c131b;
+      --border:#243141;
+      --border2:#2b3a4b;
+      --text:#e8eef6;
+      --muted:#9fb0c3;
+
+      --neonBlue:#00a3ff;
+      --neonBlue2:#00d1ff;
+      --neonWhite:#ffffff;
+
+      --hit1:#ff2d55;
+      --hit2:#ff9500;
+      --hit3:#ffe600;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      padding-left: calc(16px + env(safe-area-inset-left));
+      padding-right: calc(16px + env(safe-area-inset-right));
+      padding-top: calc(16px + env(safe-area-inset-top));
+    }
+
+    h1{ font-size: 18px; margin: 0 0 10px; letter-spacing:.2px; }
+
+    .grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns: 1.2fr .8fr;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 10px 26px rgba(0,0,0,.28);
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size: 12px; }
+    .big{ font-size: 28px; font-weight: 800; letter-spacing:.6px; }
+
+    .sep{ height:1px; background:var(--border); margin:12px 0; opacity:.9; }
+
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background:#0f2533;
+      border:1px solid #1f3a4a;
+      font-size: 12px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .pill.good{ background:#0f2e20; border-color:#1f5b3e; }
+    .pill.warn{ background:#2e2410; border-color:#5b471f; }
+    .pill.bad{  background:#2b1414; border-color:#5b1f1f; }
+    .pill.new{  background:#0d1620; border-color:#2b5a7d; }
+
+    .btn{
+      cursor:pointer;
+      background:#1a2633;
+      color:var(--text);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:800;
+      letter-spacing:.2px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px; /* iOS-friendly target */
+    }
+    .btn:hover{ filter:brightness(1.08); }
+    .btn.danger{ background:#3a1b1b; border-color:#7d2b2b; }
+
+    input[type="number"]{
+      background:#0c131b;
+      color:var(--text);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      padding:12px 12px;
+      font-size:16px;
+      width: 140px;
+      min-height: 44px;
+    }
+
+    .spinBox{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .inline{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    /* Neon hit banner */
+    .hitBanner{
+      display:none;
+      margin-top:10px;
+      border-radius:16px;
+      padding:12px 12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(120% 120% at 10% 10%, rgba(255,230,0,.22), rgba(0,0,0,0) 60%),
+        radial-gradient(120% 120% at 90% 30%, rgba(255,149,0,.22), rgba(0,0,0,0) 55%),
+        radial-gradient(120% 120% at 40% 90%, rgba(255,45,85,.22), rgba(0,0,0,0) 60%),
+        rgba(20,10,6,.45);
+      box-shadow:
+        0 0 18px rgba(255,149,0,.22),
+        0 0 28px rgba(255,45,85,.18),
+        inset 0 0 22px rgba(255,230,0,.10);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .hitBanner.on{ display:block; animation: firePulse 1.15s ease-in-out infinite; }
+    .hitTitle{
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .9px;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 10px rgba(255,230,0,.55),
+        0 0 18px rgba(255,149,0,.40),
+        0 0 24px rgba(255,45,85,.25);
+    }
+    .hitSub{
+      margin-top:4px;
+      font-size: 12px;
+      color: rgba(232,238,246,.92);
+    }
+
+    @keyframes firePulse{
+      0%   { transform: scale(1); filter: brightness(1); }
+      50%  { transform: scale(1.01); filter: brightness(1.25); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    /* Bets chips */
+    .bets{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .betNum{
+      min-width: 48px;
+      text-align:center;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(10,15,22,.75);
+      font-weight: 900;
+      font-size: 18px;      /* easier to read */
+      letter-spacing:.2px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+    }
+    .betNum.hot{
+      border-color: rgba(0,209,255,.55);
+      box-shadow:
+        0 0 12px rgba(0,209,255,.20),
+        inset 0 0 0 1px rgba(0,0,0,.25);
+    }
+
+    /* Keypad: digits only, neon blue */
+    .kbd{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      max-width: 360px;
+      margin-top: 10px;
+    }
+    .kbd button{
+      padding:16px 0;
+      border-radius:18px;
+      font-size:22px;
+      font-weight: 900;
+      color: var(--neonWhite);
+      background:
+        radial-gradient(140% 140% at 30% 20%, rgba(0,209,255,.38), rgba(0,0,0,0) 58%),
+        rgba(0,163,255,.18);
+      border: 1px solid rgba(0,209,255,.65);
+      box-shadow:
+        0 0 16px rgba(0,209,255,.16),
+        inset 0 0 0 1px rgba(0,0,0,.35);
+      cursor:pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 56px; /* big finger target */
+      user-select:none;
+    }
+    .kbd button:active{
+      transform: translateY(1px) scale(.99);
+      filter: brightness(1.25);
+      box-shadow:
+        0 0 22px rgba(0,209,255,.28),
+        inset 0 0 0 1px rgba(0,0,0,.35);
+    }
+
+    /* Active sets layout */
+    .setCard{
+      background: rgba(10,15,22,.85);
+      border-radius: 14px;
+      padding: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>Mirror Terminal Tool (European Roulette)</h1>
+
+    <div class="grid">
+      <!-- Left / main -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted tiny">Last spin</div>
+            <div id="lastSpin" class="big">—</div>
+            <div id="lastMeta" class="muted tiny">Enter a number (0–36)</div>
+          </div>
+
+          <div class="row">
+            <label class="muted tiny">Window (spins)</label>
+            <input id="windowInput" type="number" min="2" max="3" value="2" />
+          </div>
+        </div>
+
+        <div id="hitBanner" class="hitBanner">
+          <div class="hitTitle">HIT WINDOW</div>
+          <div class="hitSub" id="hitSub">Last spin is inside the current combined bet numbers.</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="spinBox">
+          <div class="inline">
+            <input id="spinInput" type="number" min="0" max="36" placeholder="Spin (0–36)" inputmode="numeric" />
+            <button class="btn" id="clearBtn" type="button">Clear</button>
+          </div>
+          <button class="btn" id="undoBtn" type="button">Undo</button>
+          <button class="btn danger" id="resetBtn" type="button">Reset</button>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="row">
+          <div class="pill" id="statusPill">Waiting…</div>
+          <div class="muted tiny" id="statusText">Tap keypad digits to add spins automatically.</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="muted tiny">Active bet sets</div>
+        <div id="activeSets" style="margin-top:8px;"></div>
+
+        <div class="muted tiny" style="margin-top:12px;">Combined numbers to bet (deduped)</div>
+        <div class="bets" id="combinedBets"></div>
+      </div>
+
+      <!-- Right / keypad -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted tiny">Keypad</div>
+            <div class="muted tiny">Tap digits — auto-adds spins</div>
+          </div>
+        </div>
+
+        <div class="kbd" id="kbd"></div>
+
+        <div class="sep"></div>
+        <div class="muted tiny">
+          Tip: for 2-digit spins (10–36), tap the two digits quickly (e.g., “1” then “7” → 17).
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // Mirror terminal pairs
+  const mirrorTerminal = { 0:5, 5:0, 1:6, 6:1, 2:7, 7:2, 3:8, 8:3, 4:9, 9:4 };
+
+  // Terminal groups
+  const terminalGroup = (t) => {
+    if (t === 0) return [0,10,20,30];
+    if (t === 7) return [7,17,27];
+    if (t === 8) return [8,18,28];
+    if (t === 9) return [9,19,29];
+    return [t, t+10, t+20, t+30].filter(n => n <= 36);
+  };
+
+  // European wheel order (single zero)
+  const wheel = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+
+  const neighborsOf = (n, k=1) => {
+    const i = wheel.indexOf(n);
+    if (i < 0) return [];
+    const res = new Set();
+    for (let d=1; d<=k; d++){
+      res.add(wheel[(i-d+wheel.length)%wheel.length]);
+      res.add(wheel[(i+d)%wheel.length]);
+    }
+    return [...res];
+  };
+
+  // State
+  let spins = [];
+  let active = []; // [{id, trigger, t, mt, nums, remaining, createdAtIndex}]
+
+  // DOM
+  const elLastSpin = document.getElementById('lastSpin');
+  const elLastMeta = document.getElementById('lastMeta');
+  const elSpinInput = document.getElementById('spinInput');
+  const elWindowInput = document.getElementById('windowInput');
+  const elUndoBtn = document.getElementById('undoBtn');
+  const elResetBtn = document.getElementById('resetBtn');
+  const elClearBtn = document.getElementById('clearBtn');
+  const elActiveSets = document.getElementById('activeSets');
+  const elCombinedBets = document.getElementById('combinedBets');
+  const elStatusPill = document.getElementById('statusPill');
+  const elStatusText = document.getElementById('statusText');
+  const elKbd = document.getElementById('kbd');
+  const elHitBanner = document.getElementById('hitBanner');
+  const elHitSub = document.getElementById('hitSub');
+
+  const clampInt = (v, min, max) => Math.max(min, Math.min(max, v|0));
+  const windowSize = () => clampInt(parseInt(elWindowInput.value || "2", 10), 2, 3);
+
+  // Lightweight UUID fallback (keeps method; only stability)
+  const uid = () => {
+    if (globalThis.crypto && typeof crypto.randomUUID === 'function') return crypto.randomUUID();
+    return 'id-' + Math.random().toString(16).slice(2) + '-' + Date.now().toString(16);
+  };
+
+  function addSpinFromValue(n){
+    if (!Number.isFinite(n) || n < 0 || n > 36) return;
+
+    spins.push(n);
+    elSpinInput.value = '';
+
+    // Decrement remaining for existing active sets (a new spin occurred)
+    active.forEach(s => s.remaining = Math.max(0, s.remaining - 1));
+    active = active.filter(s => s.remaining > 0);
+
+    // Create a new set triggered by this spin (mirror terminal of terminal(n))
+    const t = (n === 0) ? 0 : (n % 10);
+    const mt = mirrorTerminal[t];
+    const nums = terminalGroup(mt);
+
+    active.push({
+      id: uid(),
+      trigger: n,
+      t, mt,
+      nums,
+      remaining: windowSize(),
+      createdAtIndex: spins.length - 1
+    });
+
+    render();
+  }
+
+  function addSpin(){
+    const raw = elSpinInput.value;
+    if (raw === '' || raw === null || raw === undefined) return;
+    const n = parseInt(raw, 10);
+    addSpinFromValue(n);
+  }
+
+  function undo(){
+    if (!spins.length) return;
+    spins.pop();
+
+    // Rebuild active sets from scratch based on history & current window size
+    const w = windowSize();
+    active = [];
+    for (let i=0; i<spins.length; i++){
+      active.forEach(s => s.remaining = Math.max(0, s.remaining - 1));
+      active = active.filter(s => s.remaining > 0);
+
+      const n = spins[i];
+      const t = (n === 0) ? 0 : (n % 10);
+      const mt = mirrorTerminal[t];
+      active.push({
+        id: uid(),
+        trigger: n,
+        t, mt,
+        nums: terminalGroup(mt),
+        remaining: w,
+        createdAtIndex: i
+      });
+    }
+    render();
+  }
+
+  function resetAll(){
+    spins = [];
+    active = [];
+    elSpinInput.value = '';
+    render();
+  }
+
+  function render(){
+    const last = spins.length ? spins[spins.length-1] : null;
+
+    elLastSpin.textContent = (last === null) ? '—' : String(last);
+    if (last === null){
+      elLastMeta.textContent = 'Tap keypad digits to enter a number (0–36)';
+    } else {
+      const t = (last === 0) ? 0 : (last % 10);
+      const mt = mirrorTerminal[t];
+      const neigh = neighborsOf(last, 1);
+      elLastMeta.textContent = `Terminal ${t} → mirror terminal ${mt} | Wheel neighbours: ${neigh.join(', ')}`;
+    }
+
+    // Combined bets (dedupe)
+    const combined = new Set();
+    active.forEach(s => s.nums.forEach(n => combined.add(n)));
+
+    // HIT WINDOW banner (neon fire pulse)
+    const hit = (last !== null) && combined.has(last);
+    elHitBanner.className = 'hitBanner' + (hit ? ' on' : '');
+    elHitSub.textContent = hit
+      ? `Last spin ${last} is inside the current bet window.`
+      : `Last spin is inside the current combined bet numbers.`;
+
+    // Status
+    if (!active.length){
+      elStatusPill.className = 'pill';
+      elStatusPill.textContent = 'Waiting…';
+      elStatusText.textContent = 'Tap keypad digits to add spins automatically.';
+    } else {
+      elStatusPill.className = 'pill good';
+      elStatusPill.textContent = hit ? 'HIT' : 'Active';
+      elStatusText.textContent = `Tracking ${active.length} active set(s). Window = ${windowSize()} spins.`;
+    }
+
+    // Active sets display
+    elActiveSets.innerHTML = '';
+    active
+      .slice()
+      .sort((a,b)=> b.createdAtIndex - a.createdAtIndex)
+      .forEach(s => {
+        const box = document.createElement('div');
+        box.className = 'setCard';
+
+        const title = document.createElement('div');
+        title.className = 'row';
+        title.innerHTML = `
+          <span class="pill new">Trigger ${s.trigger}</span>
+          <span class="pill">t${s.t}→mt${s.mt}</span>
+          <span class="pill warn">spins left: ${s.remaining}</span>
+        `;
+        box.appendChild(title);
+
+        const nums = document.createElement('div');
+        nums.className = 'bets';
+        s.nums.forEach(n => {
+          const d = document.createElement('div');
+          d.className = 'betNum hot';
+          d.textContent = n;
+          nums.appendChild(d);
+        });
+        box.appendChild(nums);
+        elActiveSets.appendChild(box);
+      });
+
+    // Combined bets UI
+    elCombinedBets.innerHTML = '';
+    [...combined].sort((a,b)=>a-b).forEach(n => {
+      const d = document.createElement('div');
+      d.className = 'betNum';
+      d.textContent = n;
+      elCombinedBets.appendChild(d);
+    });
+  }
+
+  // Keypad (digits only)
+  function makeKeypad(){
+    const digits = [1,2,3,4,5,6,7,8,9,0];
+    elKbd.innerHTML = '';
+    digits.forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = String(v);
+      b.addEventListener('click', () => onDigitTap(v));
+      elKbd.appendChild(b);
+    });
+  }
+
+  // Digit buffering logic for 0–36 without extra keys.
+  // Tap 2 digits quickly => 2-digit number (10–36). Pause => auto-add single digit.
+  let digitBuffer = '';
+  let commitTimer = null;
+  const COMMIT_MS = 420;
+
+  function clearCommitTimer(){
+    if (commitTimer) { clearTimeout(commitTimer); commitTimer = null; }
+  }
+
+  function commitBuffer(){
+    clearCommitTimer();
+    if (!digitBuffer) return;
+    const n = parseInt(digitBuffer, 10);
+    digitBuffer = '';
+    if (Number.isFinite(n) && n >= 0 && n <= 36) addSpinFromValue(n);
+    else {
+      // invalid buffer: just clear it (no method change)
+      elSpinInput.value = '';
+      render();
+    }
+  }
+
+  function scheduleCommit(){
+    clearCommitTimer();
+    commitTimer = setTimeout(commitBuffer, COMMIT_MS);
+  }
+
+  function onDigitTap(d){
+    // Append digit
+    const next = (digitBuffer + String(d)).slice(0, 2); // max 2 digits needed (0–36)
+    digitBuffer = next;
+    elSpinInput.value = next;
+
+    const n = parseInt(next, 10);
+    if (!Number.isFinite(n)) return;
+
+    // If already clearly complete (>=10 or single digit), commit after short delay.
+    // Special case: if next is 3 and user might want 30-36, we wait for second digit.
+    // Similarly 1/2 could become 10-29, so we wait briefly.
+    // This preserves the “digits only” keypad while still allowing 2-digit numbers.
+    if (next.length === 2) {
+      commitBuffer();
+      return;
+    }
+
+    // For single digit:
+    // - 0..9 valid, but if it's 1/2/3 we allow a second digit by waiting a moment.
+    // - For 4..9 we can commit quickly (can't form valid 2-digit <=36 that starts with 4..9 except 40+, invalid).
+    if (n >= 4) {
+      // Commit quickly (still feels instant)
+      clearCommitTimer();
+      commitTimer = setTimeout(commitBuffer, 160);
+    } else {
+      // Wait to see if user taps a second digit
+      scheduleCommit();
+    }
+  }
+
+  // Wire up
+  elUndoBtn.addEventListener('click', () => { clearCommitTimer(); digitBuffer=''; undo(); });
+  elResetBtn.addEventListener('click', () => { clearCommitTimer(); digitBuffer=''; resetAll(); });
+  elClearBtn.addEventListener('click', () => { clearCommitTimer(); digitBuffer=''; elSpinInput.value=''; elSpinInput.focus(); });
+
+  elSpinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { clearCommitTimer(); digitBuffer=''; addSpin(); }
+  });
+
+  elWindowInput.addEventListener('change', () => {
+    // Window changes affect future sets (method unchanged)
+    render();
+  });
+
+  makeKeypad();
+  render();
+})();
+</script>
+</body>
+</html>
