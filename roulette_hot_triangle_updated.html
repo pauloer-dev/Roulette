@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Roulette Block-Jump Tool</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #121824;
+      --muted: #8ea0b8;
+      --text: #e8eef7;
+      --accent: #ff6a3d;
+      --ok: #39d98a;
+      --border: rgba(255,255,255,.08);
+      --shadow: 0 12px 28px rgba(0,0,0,.35);
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--sans);
+      background: radial-gradient(1200px 700px at 20% 0%, rgba(255,106,61,.12), transparent 60%),
+                  radial-gradient(900px 600px at 100% 30%, rgba(57,217,138,.10), transparent 55%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 20px;
+    }
+    .wrap {
+      width: min(860px, 100%);
+      display: grid;
+      gap: 14px;
+    }
+    .header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 10px 6px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: .2px;
+    }
+    .hint { color: var(--muted); font-size: 13px; }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .card-inner { padding: 16px; }
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items: end;
+    }
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    input[type="number"] {
+      width: 100%;
+      padding: 12px 12px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.25);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+    }
+    input[type="number"]:focus { border-color: rgba(255,106,61,.5); box-shadow: 0 0 0 4px rgba(255,106,61,.12); }
+    .btns { display: flex; gap: 10px; }
+    button {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform .05s ease, border-color .15s ease, background .15s ease;
+      white-space: nowrap;
+    }
+    button.primary {
+      border-color: rgba(255,106,61,.55);
+      background: rgba(255,106,61,.12);
+    }
+    button:active { transform: translateY(1px); }
+    .toggles {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 12px;
+    }
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      user-select: none;
+    }
+    .toggle input { transform: translateY(1px); }
+    
+
+.keypad {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.keypad button {
+  padding: 12px 0;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 800;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform .05s ease, border-color .15s ease, background .15s ease;
+}
+.keypad button:active { transform: translateY(1px); }
+.keypad button.wide { grid-column: span 1; }
+.keypad button.primary {
+  border-color: rgba(255,106,61,.55);
+  background: rgba(255,106,61,.12);
+}
+
+/* Hit alert */
+.hit-flash{
+  position: fixed;
+  inset: 0;
+  /* warmer + stronger "fire" */
+  background: radial-gradient(900px 600px at 15% 10%, rgba(255,106,61,.38), transparent 60%),
+              radial-gradient(800px 520px at 85% 30%, rgba(255,138,61,.22), transparent 55%),
+              rgba(255,106,61,.20);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 999;
+}
+.hit-log{
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 1000;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  max-height: 60vh;
+  overflow: hidden;
+}
+.hit-item{
+  font-family: var(--mono);
+  font-weight: 900;
+  letter-spacing: .5px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(255,106,61,.70);
+  background: rgba(0,0,0,.38);
+  box-shadow: var(--shadow);
+  min-width: 54px;
+  text-align: center;
+  opacity: 1;
+}
+.hit-item.new{
+  animation: hitItem 1400ms ease-in-out 1;
+}
+.hit-log .hit-item:nth-child(n+5){
+  opacity: .72;
+}
+body.hit-alert .hit-flash{
+  animation: hitFlash 1600ms ease-out 1;
+}
+@keyframes hitFlash{
+  0%{ opacity: 0; }
+  10%{ opacity: 1; }
+  55%{ opacity: .80; }
+  100%{ opacity: 0; }
+}
+@keyframes hitItem{
+  0%{ transform: translateY(-10px) scale(.96); filter: brightness(1); }
+  18%{ transform: translateY(0) scale(1.06); filter: brightness(1.35); }
+  55%{ transform: translateY(0) scale(1.02); filter: brightness(1.15); }
+  100%{ transform: translateY(0) scale(1); filter: brightness(1); }
+}
+
+    .out {
+      display: grid;
+      gap: 10px;
+      padding: 14px 16px 18px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 8px;
+      padding: 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: rgba(0,0,0,.16);
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      letter-spacing: .2px;
+    }
+    .tag .emoji { font-size: 16px; }
+    .tag .label { font-size: 13px; color: var(--muted); font-weight: 600; }
+    .nums {
+      font-family: var(--mono);
+      font-size: 16px;
+      letter-spacing: .4px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pill {
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      min-width: 44px;
+      text-align: center;
+    }
+    .pill.fire { border-color: rgba(255,106,61,.40); }
+    .pill.ok { border-color: rgba(57,217,138,.40); }
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .meta code {
+      font-family: var(--mono);
+      background: rgba(255,255,255,.03);
+      border: 1px solid var(--border);
+      padding: 2px 6px;
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 12px;
+    }
+    .error {
+      color: #ffb4a2;
+      border-color: rgba(255,180,162,.35) !important;
+      background: rgba(255,180,162,.08) !important;
+    }
+    
+.statusTop{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:12px;
+  flex-wrap:wrap;
+}
+.bigstat{
+  font-family: var(--mono);
+  font-weight: 900;
+  font-size: 42px;
+  letter-spacing: .6px;
+  line-height: 1;
+}
+.substat{
+  color: var(--muted);
+  font-size: 13px;
+}
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 10px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background: rgba(0,0,0,.18);
+  font-weight:800;
+  letter-spacing:.2px;
+}
+.badge.ok{ border-color: rgba(57,217,138,.45); }
+.badge.warn{ border-color: rgba(255,106,61,.55); }
+.badge.cool{ border-color: rgba(255,180,162,.45); }
+
+.footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="header">
+      <h1>Roulette Block-Jump Tool</h1>
+      <div class="hint">Mode A = automatic blocks • Mode B = optional neighbors</div>
+    </div>
+
+    <div class="card">
+      <div class="card-inner">
+        <!-- TOP: current triangle status + triangle numbers -->
+        <div class="out" id="out">
+          <div class="row">
+            <div class="tag"><span class="emoji">🎯</span> <span>Enter a number — results update automatically</span></div>
+            <div class="hint">This tool will find the current Hot Triangle from your recent spins and show only those 9 numbers.</div>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div class="field">
+            <label for="hit">Last hit number (0–36)</label>
+            <input id="hit" type="number" inputmode="numeric" min="0" max="36" step="1" placeholder="e.g., 17" />
+          </div>
+          <div class="btns">
+            <button id="undoHitBtn" title="Undo last committed hit">Undo hit</button>
+            <button id="resetBtn" class="primary" title="Reset everything (predictions + hit log)">Reset</button>
+          </div>
+        </div>
+
+        <div class="toggles">
+          <label class="toggle">
+            <input id="modeB" type="checkbox" />
+            <span><strong>Mode B</strong> (±1 neighbors)</span>
+          </label>
+        </div>
+
+        <div class="meta" id="meta"></div>
+
+        <div class="keypad" id="keypad" aria-label="Number keypad">
+          <button type="button" data-k="1">1</button>
+          <button type="button" data-k="2">2</button>
+          <button type="button" data-k="3">3</button>
+          <button type="button" data-k="4">4</button>
+          <button type="button" data-k="5">5</button>
+          <button type="button" data-k="6">6</button>
+          <button type="button" data-k="7">7</button>
+          <button type="button" data-k="8">8</button>
+          <button type="button" data-k="9">9</button>
+          <button type="button" data-k="0" class="wide">0</button>
+          <button type="button" data-k="back" title="Backspace">⌫</button>
+          <button type="button" data-k="undoHit" class="primary" title="Undo last hit">↩︎</button>
+        </div>
+
+      </div>
+
+      <div class="footer">
+        <strong>Logic:</strong> Split each dozen into 4 blocks of 3 (1–3, 4–6, 7–9, 10–12). When a hit lands in a block, output the <em>same block index</em> in the other two dozens.
+        <br/>
+        <strong>Note:</strong> 0 has no dozen/block → shown as RESET.
+      </div>
+    </div>
+  </div>
+
+  
+  <div class="hit-flash" id="hitFlash" aria-hidden="true"></div>
+  <div class="hit-log" id="hitLog" aria-hidden="true"></div>
+
+
+  
+<script>
+  const hitEl = document.getElementById("hit");
+  const modeBEl = document.getElementById("modeB");
+  const outEl = document.getElementById("out");
+  const metaEl = document.getElementById("meta");
+  const undoHitBtn = document.getElementById("undoHitBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const keypad = document.getElementById("keypad");
+  const hitFlashEl = document.getElementById("hitFlash");
+  const hitLogEl = document.getElementById("hitLog");
+
+  // --- Helpers ---
+  function clamp(n, lo, hi) { return Math.max(lo, Math.min(hi, n)); }
+
+  function getDozenStart(dozen) {
+    if (dozen === 1) return 1;
+    if (dozen === 2) return 13;
+    if (dozen === 3) return 25;
+    return null;
+  }
+
+  function getDozen(n) {
+    if (n >= 1 && n <= 12) return 1;
+    if (n >= 13 && n <= 24) return 2;
+    if (n >= 25 && n <= 36) return 3;
+    return null; // includes 0 or invalid
+  }
+
+  function getBlockIndex(n) {
+    // block within its dozen: 1..4
+    const pos = ((n - 1) % 12) + 1; // 1..12
+    return Math.ceil(pos / 3);      // 1..4
+  }
+
+  function makeBlock(dozen, blockIndex) {
+    const start = getDozenStart(dozen);
+    const offset = (blockIndex - 1) * 3;
+    const a = start + offset;
+    return [a, a + 1, a + 2];
+  }
+
+  function pills(nums, kind) {
+    return nums.map(n => `<span class="pill ${kind}">${n}</span>`).join("");
+  }
+
+  function renderRow(kindEmoji, title, label, nums, kindClass) {
+    return `
+      <div class="row">
+        <div class="tag">
+          <span class="emoji">${kindEmoji}</span>
+          <span>${title} <span class="label">${label}</span></span>
+        </div>
+        <div class="nums">${pills(nums, kindClass)}</div>
+      </div>
+    `;
+  }
+
+  function renderNoteRow(emoji, title, text) {
+    return `
+      <div class="row">
+        <div class="tag"><span class="emoji">${emoji}</span> <span>${title}</span></div>
+        <div class="hint">${text}</div>
+      </div>
+    `;
+  }
+
+  function renderError(msg) {
+    outEl.innerHTML = `
+      <div class="row error">
+        <div class="tag"><span class="emoji">⚠️</span> <span>Input error</span></div>
+        <div>${msg}</div>
+      </div>
+    `;
+    metaEl.textContent = "";
+  }
+
+  // --- Hot Triangle Tracking (stable + auto-switch) ---
+// Triangle families are block indices (1..4) across all three dozens:
+// block 1 = (1-3, 13-15, 25-27) ... block 4 = (10-12, 22-24, 34-36)
+const HOT_WINDOW = 30;          // rolling window size (last N non-zero spins)
+const MIN_SPINS_FOR_LOCK = 6;   // minimum non-zero spins before we can "lock"
+const LOCK_MARGIN = 2;          // leader must be ahead by this many hits to lock/switch
+const COOL_AFTER = 5;           // if no hit for this many spins, we allow switching if another leader is clearly ahead
+
+const spinHistory = []; // non-zero spins, oldest -> newest
+let lockedBlockIndex = null;    // the current "real" hot triangle (locked)
+let lastLeaderBlock = null;     // rolling leader (for display)
+
+function blockLabel(idx) {
+  const b1 = makeBlock(1, idx).join(" ");
+  const b2 = makeBlock(2, idx).join(" ");
+  const b3 = makeBlock(3, idx).join(" ");
+  return `${b1} • ${b2} • ${b3}`;
+}
+
+function triangleNums(idx) {
+  return [...makeBlock(1, idx), ...makeBlock(2, idx), ...makeBlock(3, idx)];
+}
+
+function countBlocksInWindow() {
+  const counts = [0,0,0,0,0]; // 1..4
+  const recent = spinHistory.slice(-HOT_WINDOW);
+  recent.forEach(n => counts[getBlockIndex(n)]++);
+  return { counts, recent };
+}
+
+function leaderFromCounts(counts, recent) {
+  // Determine leader with tie-break: most recent hit wins
+  let best = 1;
+  for (let i = 2; i <= 4; i++) {
+    if (counts[i] > counts[best]) best = i;
+    else if (counts[i] === counts[best]) {
+      const lastPos = (idx) => {
+        for (let k = recent.length - 1; k >= 0; k--) if (getBlockIndex(recent[k]) === idx) return k;
+        return -1;
+      };
+      if (lastPos(i) > lastPos(best)) best = i;
+    }
+  }
+  const sorted = [1,2,3,4].map(i => ({i, c: counts[i]})).sort((a,b)=> b.c - a.c);
+  const bestCount = sorted[0].c;
+  const secondCount = sorted[1].c;
+  return { best, bestCount, secondCount };
+}
+
+function spinsSinceBlockHit(idx){
+  for (let i = spinHistory.length - 1, gap = 0; i >= 0; i--, gap++) {
+    if (getBlockIndex(spinHistory[i]) === idx) return gap;
+  }
+  return null;
+}
+
+function updateLockedTriangle() {
+  const { counts, recent } = countBlocksInWindow();
+  const { best, bestCount, secondCount } = leaderFromCounts(counts, recent);
+  lastLeaderBlock = best;
+
+  const windowLen = recent.length;
+  const canLock = windowLen >= MIN_SPINS_FOR_LOCK;
+
+  if (!lockedBlockIndex) {
+    if (canLock && (bestCount - secondCount) >= LOCK_MARGIN) {
+      lockedBlockIndex = best;
+    }
+  } else {
+    const since = spinsSinceBlockHit(lockedBlockIndex);
+    const lockedCount = counts[lockedBlockIndex] ?? 0;
+    if (since !== null && since >= COOL_AFTER && best !== lockedBlockIndex) {
+      if (canLock && (counts[best] - lockedCount) >= LOCK_MARGIN) {
+        lockedBlockIndex = best;
+      }
+    }
+  }
+
+  return { counts, recent, best, windowLen, canLock };
+}
+
+function isLockedCooling(counts){
+  if (!lockedBlockIndex) return false;
+  const since = spinsSinceBlockHit(lockedBlockIndex);
+  return since !== null && since >= COOL_AFTER;
+}
+
+function currentTriangleBlock(best){
+  return lockedBlockIndex ?? best;
+}
+
+function isStableLocked(){
+  return lockedBlockIndex !== null;
+}
+
+function triangleContainsHit(blockIdx, n){
+  return getBlockIndex(n) === blockIdx;
+}
+
+// --- Undo/Reset + UI flash (kept lightweight) ---
+
+  // --- Undo/Reset + UI flash (kept lightweight) ---
+  let commitTimer = null;
+  let suppressInput = false;
+  let lastValue = "";
+
+  let hitAlertTimer = null;
+  function showHitAlert(n){
+    document.body.classList.remove("hit-alert");
+    void document.body.offsetWidth;
+    document.body.classList.add("hit-alert");
+    clearTimeout(hitAlertTimer);
+    hitAlertTimer = setTimeout(() => {
+      document.body.classList.remove("hit-alert");
+    }, 1650);
+
+    const item = document.createElement("div");
+    item.className = "hit-item new";
+    item.textContent = String(n);
+    hitLogEl.prepend(item);
+    setTimeout(() => item.classList.remove("new"), 1500);
+
+    const maxItems = 10;
+    while (hitLogEl.children.length > maxItems) {
+      hitLogEl.removeChild(hitLogEl.lastElementChild);
+    }
+  }
+
+  function renderInitial() {
+  outEl.innerHTML = `
+    <div class="row">
+      <div class="tag"><span class="emoji">🔥</span> <span>Hot Triangle + Next Blocks</span></div>
+      <div class="hint">Enter each spin. The tool locks onto the current Hot Triangle (when it’s clear), shows <strong>spins since last Hot Triangle hit</strong>, and always shows the classic 6-number “next blocks” from your latest hit.</div>
+    </div>
+  `;
+  metaEl.textContent = "";
+}
+
+  function setHitValue(val) {
+    hitEl.value = val;
+    lastValue = val;
+  }
+
+  const stateHistory = [];
+
+  function snapshotState() {
+    return {
+      outHTML: outEl.innerHTML,
+      metaHTML: metaEl.innerHTML,
+      modeB: modeBEl.checked,
+      hitLogHTML: hitLogEl.innerHTML,
+      spins: spinHistory.slice(),
+      lockedBlockIndex,
+      lastLeaderBlock
+    };
+  }
+
+  function restoreState(snap) {
+    outEl.innerHTML = snap.outHTML;
+    metaEl.innerHTML = snap.metaHTML;
+    modeBEl.checked = snap.modeB;
+    hitLogEl.innerHTML = snap.hitLogHTML;
+
+    spinHistory.length = 0;
+    snap.spins.forEach(n => spinHistory.push(n));
+    lockedBlockIndex = snap.lockedBlockIndex;
+    lastLeaderBlock = snap.lastLeaderBlock;
+document.body.classList.remove("hit-alert");
+    if (commitTimer) { clearTimeout(commitTimer); commitTimer = null; }
+
+    suppressInput = true;
+    hitEl.value = "";
+    lastValue = "";
+    setTimeout(() => { suppressInput = false; hitEl.focus(); }, 0);
+  }
+
+  function undoLastHit() {
+    if (stateHistory.length <= 1) return;
+    stateHistory.pop();
+    restoreState(stateHistory[stateHistory.length - 1]);
+  }
+
+  function resetAll() {
+    spinHistory.length = 0;
+    lockedBlockIndex = null;
+    lastLeaderBlock = null;
+    hitLogEl.innerHTML = "";
+    modeBEl.checked = false;
+    metaEl.textContent = "";
+    renderInitial();
+
+    stateHistory.length = 0;
+    stateHistory.push(snapshotState());
+
+    suppressInput = true;
+    hitEl.value = "";
+    lastValue = "";
+    if (commitTimer) { clearTimeout(commitTimer); commitTimer = null; }
+    setTimeout(() => { suppressInput = false; hitEl.focus(); }, 0);
+  }
+
+  function renderReset() {
+  spinHistory.length = 0;
+  lockedBlockIndex = null;
+  lastLeaderBlock = null;
+  outEl.innerHTML = `
+    <div class="row">
+      <div class="tag"><span class="emoji">🌀</span> <span>Hit was <strong>0</strong> → <span class="label">RESET</span></span></div>
+      <div class="hint">Tracker cleared. Continue from the next non-zero hit.</div>
+    </div>
+  `;
+  metaEl.innerHTML = `<span>Dozen: <code>none</code></span> <span>Block: <code>none</code></span>`;
+}
+
+  // --- Core calculation ---
+  function calculate(fromUserInput = true) {
+  const raw = hitEl.value.trim();
+  if (raw === "") return renderInitial();
+
+  const n = Number(raw);
+  if (!Number.isInteger(n) || n < 0 || n > 36) {
+    return renderError("Please enter a whole number between <strong>0</strong> and <strong>36</strong>.");
+  }
+
+  if (n === 0) {
+    return renderReset();
+  }
+
+  spinHistory.push(n);
+
+  const { counts, recent, best, windowLen, canLock } = updateLockedTriangle();
+  const activeBlock = currentTriangleBlock(best);
+  const stable = isStableLocked();
+  const cooling = isLockedCooling(counts);
+
+  const since = spinsSinceBlockHit(activeBlock);
+  const hitInTriangle = triangleContainsHit(activeBlock, n);
+
+  const dozen = getDozen(n);
+  const blockIndex = getBlockIndex(n);
+
+  metaEl.innerHTML = `
+    <span>Hit: <code>${n}</code></span>
+    <span>Dozen: <code>${dozen}${dozen===1?"st":dozen===2?"nd":"rd"}</code></span>
+    <span>Block: <code>${blockIndex}</code> (<code>${makeBlock(dozen, blockIndex).join(" ")}</code>)</span>
+    <span>Spins logged: <code>${spinHistory.length}</code></span>
+  `;
+
+  let html = "";
+
+  const leaderTxt = lastLeaderBlock ? `Overall leader: <strong>Block ${lastLeaderBlock}</strong>` : `Overall leader: <strong>—</strong>`;
+  const lockedTxt = stable ? `Current Hot Triangle: <strong>Block ${lockedBlockIndex}</strong>` : `Current Hot Triangle: <strong>Learning…</strong>`;
+  const coolBadge = stable && cooling ? `<span class="badge cool">COOLING</span>` : ``;
+
+  html += `
+    <div class="row">
+      <div class="statusTop">
+        <div class="tag">
+          <span class="emoji">${hitInTriangle && stable ? "✅" : hitInTriangle ? "🟧" : "⏳"}</span>
+          <span>${hitInTriangle ? "Triangle HIT this spin" : "Triangle NOT hit this spin"} <span class="label">${stable ? "" : "(learning)"}</span></span>
+        </div>
+        ${coolBadge}
+      </div>
+
+      <div class="statusTop" style="margin-top:10px;">
+        <div>
+          <div class="substat">Spins since last Hot Triangle hit</div>
+          <div class="bigstat">${since === null ? "—" : since}</div>
+        </div>
+        <div class="substat" style="text-align:right;">
+          <div>${lockedTxt}</div>
+          <div>${leaderTxt}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const hotNums = triangleNums(activeBlock);
+  const hotLabel = stable ? `Block ${activeBlock}` : `Leading Block ${activeBlock}`;
+  html += renderRow("🔥", "Hot Triangle numbers", hotLabel, hotNums, "fire");
+
+  const targetDozens = [1,2,3].filter(d => d !== dozen);
+  const nextA = makeBlock(targetDozens[0], blockIndex);
+  const nextB = makeBlock(targetDozens[1], blockIndex);
+  html += renderRow("🎯", "Next blocks (6 numbers)", "Same block in the other two dozens", [...nextA, ...nextB], "ok");
+
+  if (fromUserInput && stable && hitInTriangle) {
+    showHitAlert(n);
+  }
+
+  outEl.innerHTML = html;
+}
+
+function isValidHitValue(raw){
+    if (raw === "") return false;
+    const n = Number(raw);
+    return Number.isInteger(n) && n >= 0 && n <= 36;
+  }
+
+  function scheduleCommit(){
+    if (suppressInput) return;
+    if (commitTimer) clearTimeout(commitTimer);
+
+    const raw = hitEl.value.trim();
+    if (!isValidHitValue(raw)) return;
+
+    const commitAfterMs = (() => {
+      if (raw.length >= 2) return 90;
+      const d = raw[0];
+      if (d === "1" || d === "2" || d === "3") return 900;
+      return 380;
+    })();
+
+    commitTimer = setTimeout(() => {
+      if (suppressInput) return;
+      const nowRaw = hitEl.value.trim();
+      if (nowRaw === raw && isValidHitValue(nowRaw)) {
+        commitHit();
+      }
+    }, commitAfterMs);
+  }
+
+  function commitHit(){
+    const raw = hitEl.value.trim();
+    if (!isValidHitValue(raw)) return;
+
+    calculate(true);
+    stateHistory.push(snapshotState());
+
+    suppressInput = true;
+    hitEl.value = "";
+    lastValue = "";
+    if (commitTimer) { clearTimeout(commitTimer); commitTimer = null; }
+    setTimeout(() => { suppressInput = false; hitEl.focus(); }, 0);
+  }
+
+  // --- Events ---
+  undoHitBtn.addEventListener("click", undoLastHit);
+  resetBtn.addEventListener("click", resetAll);
+
+  // Mode B no longer affects predictions in Hot Triangle mode, keep it visible but informative
+  modeBEl.addEventListener("change", () => {
+    // no-op: retained for UI compatibility
+  });
+
+  hitEl.addEventListener("input", () => {
+    if (suppressInput) return;
+    const v = hitEl.value;
+    lastValue = v;
+    if (v.trim() === "") return;
+    scheduleCommit();
+  });
+
+  keypad.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const k = btn.dataset.k;
+
+    if (k === "back") {
+      setHitValue(hitEl.value.slice(0, -1));
+    } else if (k === "undoHit") {
+      return undoLastHit();
+    } else {
+      const next = (hitEl.value + k).replace(/^0+(?=\d)/, "");
+      let clamped = next;
+      const n = Number(next);
+      if (Number.isFinite(n) && n > 36) clamped = "36";
+      setHitValue(clamped);
+    }
+
+    if (hitEl.value.trim() !== "") scheduleCommit();
+    hitEl.focus();
+  });
+
+  // init
+  hitEl.focus();
+  renderInitial();
+  stateHistory.push(snapshotState());
+</script>
+
+</body>
+</html>
