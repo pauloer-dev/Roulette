@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Roulette Mirror (Rolling Last 3)</title>
+  <style>
+    :root { --bg:#0b0f14; --card:#121826; --text:#e8eefc; --muted:#9fb0d0; --accent:#2b7cff; --ok:#1fd19b; }
+    *{box-sizing:border-box;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    body{margin:0;background:var(--bg);color:var(--text);display:flex;justify-content:center;padding:18px}
+    .wrap{width:min(900px,100%);display:grid;gap:14px}
+    .card{background:var(--card);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:14px}
+    h1{margin:0 0 6px 0;font-size:18px}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    input{width:120px;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#0e1420;color:var(--text);outline:none}
+    button{padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:#0e1420;color:var(--text);cursor:pointer}
+    button.primary{background:rgba(43,124,255,.18);border-color:rgba(43,124,255,.45)}
+    button.danger{background:rgba(255,77,77,.12);border-color:rgba(255,77,77,.35)}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.12)}
+    .label{color:var(--muted);font-size:12px}
+    .nums{font-weight:700;letter-spacing:.5px}
+    .big{font-size:22px}
+    .neon{color:#9fd1ff;text-shadow:0 0 10px rgba(43,124,255,.6),0 0 22px rgba(43,124,255,.35)}
+    .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+    @media (max-width:700px){.grid{grid-template-columns:1fr}}
+    .help{color:var(--muted);font-size:12px;line-height:1.45;margin-top:8px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Mirror Algorithm (Rolling Last 3)</h1>
+      <div class="row">
+        <div class="pill">
+          <span class="label">Enter last spin (0–36):</span>
+          <input id="spin" inputmode="numeric" placeholder="e.g. 29" />
+        </div>
+        <button class="primary" id="add">Add spin</button>
+        <button id="undo">Undo</button>
+        <button class="danger" id="reset">Reset</button>
+      </div>
+      <div class="help">
+        • You only type the latest number. It keeps a rolling <b>last 3</b> in your browser (localStorage).<br/>
+        • It builds the <b>mirror pool</b> for each of the last 3 and merges them (duplicates removed).<br/>
+        • Then it selects the <b>tightest 4-number wheel cluster</b> from that set (European wheel order).
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="pill"><span class="label">Last 3</span><span class="nums big mono" id="last3">—</span></div>
+        <div style="height:10px"></div>
+        <div class="pill"><span class="label">Mirrors (per number)</span></div>
+        <div class="mono" id="mirrors" style="margin-top:10px;line-height:1.8;color:var(--text)"></div>
+      </div>
+
+      <div class="card">
+        <div class="pill"><span class="label">Set (merged pool)</span></div>
+        <div class="mono" id="set" style="margin-top:10px;line-height:1.8;color:var(--text)"></div>
+        <div style="height:12px"></div>
+        <div class="pill"><span class="label">4 picks</span><span class="nums big neon mono" id="picks">—</span></div>
+        <div class="help" id="clusterInfo"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // European wheel (racetrack) order
+    const WHEEL = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
+    const IDX = new Map(WHEEL.map((n,i)=>[n,i]));
+    const STORAGE_KEY = "mirror_last3_v1";
+    const STORAGE_HIST = "mirror_hist_v1";
+
+    function validSpin(n){
+      return Number.isInteger(n) && n >= 0 && n <= 36;
+    }
+
+    // Mirror pool for a single number n (your exact logic)
+    function mirrorPool(n){
+      const d = n % 10;
+      const md = (d + 5) % 10; // mirror last digit
+      const out = [];
+      // Build md, md+10, md+20, md+30... within 0..36 (and skip 40+)
+      for (let t = md; t <= 36; t += 10) {
+        // avoid 0..36 check already ensured
+        out.push(t);
+      }
+      // Special case: md=0 should include 0,10,20,30 (loop already does) good.
+      // Note: md=9 produces 9,19,29 (no 39) good.
+      return out;
+    }
+
+    function uniqueSorted(nums){
+      return [...new Set(nums)].sort((a,b)=>a-b);
+    }
+
+    // Compute tightest cluster of 4 numbers from a set, based on circular span on the wheel.
+    // Span of a combo = 37 - largest_gap_between_consecutive_indices (including wrap)
+    function best4Cluster(setNums){
+      const nums = [...setNums];
+      if (nums.length === 0) return { picks: [], span: null, arc: null };
+      if (nums.length <= 4) {
+        const picks = nums.slice().sort((a,b)=>IDX.get(a)-IDX.get(b));
+        return { picks, span: 0, arc: picks.map(n=>IDX.get(n)) };
+      }
+
+      const indices = nums.map(n => ({ n, i: IDX.get(n) })).sort((a,b)=>a.i-b.i);
+
+      // generate all combinations of 4 (small list: max ~12 numbers typically)
+      let best = null;
+
+      for (let a=0; a<indices.length-3; a++){
+        for (let b=a+1; b<indices.length-2; b++){
+          for (let c=b+1; c<indices.length-1; c++){
+            for (let d=c+1; d<indices.length; d++){
+              const combo = [indices[a], indices[b], indices[c], indices[d]];
+              const is = combo.map(x=>x.i).sort((x,y)=>x-y);
+
+              // gaps including wrap
+              const gaps = [];
+              for (let k=0; k<is.length-1; k++) gaps.push(is[k+1]-is[k]);
+              gaps.push((is[0] + 37) - is[is.length-1]); // wrap gap
+
+              const largestGap = Math.max(...gaps);
+              const span = 37 - largestGap; // minimal arc length covering all 4
+
+              // tie-break: prefer smaller span; then prefer arc that has smaller max distance between picks;
+              // then prefer wheel-ordered picks closer together (smaller sum of gaps)
+              const sumGaps = gaps.reduce((s,x)=>s+x,0); // always 37
+              const score = { span, largestGap };
+
+              if (!best || score.span < best.span || (score.span === best.span && score.largestGap > best.largestGap)) {
+                best = { span: score.span, largestGap: score.largestGap, picks: combo.map(x=>x.n), is };
+              }
+            }
+          }
+        }
+      }
+
+      const picksWheelOrder = best.picks.slice().sort((x,y)=>IDX.get(x)-IDX.get(y));
+      return { picks: picksWheelOrder, span: best.span, arc: best.is };
+    }
+
+    function loadLast3(){
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.filter(validSpin).slice(-3) : [];
+      } catch { return []; }
+    }
+
+    function saveLast3(arr){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(arr.slice(-3)));
+    }
+
+    function loadHist(){
+      try {
+        const raw = localStorage.getItem(STORAGE_HIST);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr.filter(validSpin) : [];
+      } catch { return []; }
+    }
+    function saveHist(arr){
+      localStorage.setItem(STORAGE_HIST, JSON.stringify(arr));
+    }
+
+    function render(){
+      const last3 = loadLast3();
+      document.getElementById("last3").textContent = last3.length ? last3.join(" ") : "—";
+
+      // mirrors per number
+      const mirrorsEl = document.getElementById("mirrors");
+      if (!last3.length){
+        mirrorsEl.textContent = "—";
+      } else {
+        mirrorsEl.innerHTML = last3.map(n => {
+          const pool = mirrorPool(n);
+          return `<div><span style="color:var(--muted)">${n} →</span> <b>${pool.join(" ")}</b></div>`;
+        }).join("");
+      }
+
+      // merged set
+      const merged = uniqueSorted(last3.flatMap(mirrorPool));
+      const setEl = document.getElementById("set");
+      setEl.textContent = merged.length ? merged.join(" ") : "—";
+
+      // best 4 picks
+      const best = best4Cluster(new Set(merged));
+      const picksEl = document.getElementById("picks");
+      picksEl.textContent = best.picks.length ? best.picks.join(" ") : "—";
+
+      // small info
+      const info = document.getElementById("clusterInfo");
+      if (!best.picks.length) {
+        info.textContent = "";
+      } else {
+        info.textContent = `Wheel-tightness: span ${best.span} steps (0 = same pocket).`;
+      }
+    }
+
+    function addSpin(){
+      const v = document.getElementById("spin").value.trim();
+      if (v === "") return;
+      const n = Number(v);
+      if (!validSpin(n)) {
+        alert("Enter an integer from 0 to 36.");
+        return;
+      }
+
+      // history for undo
+      const hist = loadHist();
+      hist.push(n);
+      saveHist(hist);
+
+      const last3 = loadLast3();
+      last3.push(n);
+      saveLast3(last3.slice(-3));
+
+      document.getElementById("spin").value = "";
+      render();
+    }
+
+    function undo(){
+      const hist = loadHist();
+      if (!hist.length) return;
+
+      hist.pop();
+      saveHist(hist);
+
+      // rebuild last3 from history
+      const last3 = hist.slice(-3);
+      saveLast3(last3);
+      render();
+    }
+
+    function resetAll(){
+      localStorage.removeItem(STORAGE_KEY);
+      localStorage.removeItem(STORAGE_HIST);
+      render();
+    }
+
+    document.getElementById("add").addEventListener("click", addSpin);
+    document.getElementById("spin").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addSpin();
+    });
+    document.getElementById("undo").addEventListener("click", undo);
+    document.getElementById("reset").addEventListener("click", resetAll);
+
+    // init: build history -> last3 if missing
+    (function init(){
+      const hist = loadHist();
+      if (hist.length) saveLast3(hist.slice(-3));
+      render();
+    })();
+  </script>
+</body>
+</html>
