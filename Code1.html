@@ -1,0 +1,726 @@
+code second last
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Mirror Terminal ±1 Tool (Roulette) - Filtered</title>
+  <style>
+    :root{
+      font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color-scheme: dark;
+      --bg:#0b0f14;
+      --card:#121a23;
+      --card2:#0c131b;
+      --border:#243141;
+      --border2:#2b3a4b;
+      --text:#e8eef6;
+      --muted:#9fb0c3;
+
+      --neonBlue:#00a3ff;
+      --neonBlue2:#00d1ff;
+      --neonWhite:#ffffff;
+
+      --hit1:#ff2d55;
+      --hit2:#ff9500;
+      --hit3:#ffe600;
+      
+      /* Roulette colors */
+      --red:#c41e3a;
+      --black:#1a1a1a;
+      --green:#008f39;
+      
+      /* Plus/Minus colors */
+      --plus:#00d1ff;
+      --minus:#ff2d55;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    .wrap{
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+      padding-left: calc(16px + env(safe-area-inset-left));
+      padding-right: calc(16px + env(safe-area-inset-right));
+      padding-top: calc(16px + env(safe-area-inset-top));
+    }
+
+    h1{ font-size: 18px; margin: 0 0 10px; letter-spacing:.2px; }
+
+    .grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns: 1.2fr .8fr;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 10px 26px rgba(0,0,0,.28);
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size: 12px; }
+    .big{ font-size: 28px; font-weight: 800; letter-spacing:.6px; }
+
+    .sep{ height:1px; background:var(--border); margin:12px 0; opacity:.9; }
+
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      background:#0f2533;
+      border:1px solid #1f3a4a;
+      font-size: 12px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .pill.good{ background:#0f2e20; border-color:#1f5b3e; }
+    .pill.warn{ background:#2e2410; border-color:#5b471f; }
+    .pill.bad{  background:#2b1414; border-color:#5b1f1f; }
+    .pill.new{  background:#0d1620; border-color:#2b5a7d; }
+    .pill.plus{ background:#0f2e3a; border-color:#1f7d9e; color:#00d1ff; }
+    .pill.minus{ background:#3a0f1f; border-color:#9e1f3d; color:#ff2d55; }
+    .pill.best{ background:#2e0f2e; border-color:#7d1f7d; color:#ff00ff; }
+    .pill.spins-left{ background:#2e2410; border-color:#7d5a1f; color:#ffd4a5; }
+
+    .btn{
+      cursor:pointer;
+      background:#1a2633;
+      color:var(--text);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:800;
+      letter-spacing:.2px;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 44px;
+    }
+    .btn:hover{ filter:brightness(1.08); }
+    .btn.danger{ background:#3a1b1b; border-color:#7d2b2b; }
+
+    input[type="number"]{
+      background:#0c131b;
+      color:var(--text);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      padding:12px 12px;
+      font-size:16px;
+      width: 140px;
+      min-height: 44px;
+    }
+
+    .spinBox{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .inline{
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+
+    /* Neon hit banner */
+    .hitBanner{
+      display:none;
+      margin-top:10px;
+      border-radius:16px;
+      padding:12px 12px;
+      border:1px solid rgba(255,255,255,.12);
+      background:
+        radial-gradient(120% 120% at 10% 10%, rgba(255,230,0,.22), rgba(0,0,0,0) 60%),
+        radial-gradient(120% 120% at 90% 30%, rgba(255,149,0,.22), rgba(0,0,0,0) 55%),
+        radial-gradient(120% 120% at 40% 90%, rgba(255,45,85,.22), rgba(0,0,0,0) 60%),
+        rgba(20,10,6,.45);
+      box-shadow:
+        0 0 18px rgba(255,149,0,.22),
+        0 0 28px rgba(255,45,85,.18),
+        inset 0 0 22px rgba(255,230,0,.10);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .hitBanner.on{ display:block; animation: firePulse 1.15s ease-in-out infinite; }
+    .hitTitle{
+      font-size: 18px;
+      font-weight: 900;
+      letter-spacing: .9px;
+      text-transform: uppercase;
+      text-shadow:
+        0 0 10px rgba(255,230,0,.55),
+        0 0 18px rgba(255,149,0,.40),
+        0 0 24px rgba(255,45,85,.25);
+    }
+    .hitSub{
+      margin-top:4px;
+      font-size: 12px;
+      color: rgba(232,238,246,.92);
+    }
+
+    @keyframes firePulse{
+      0%   { transform: scale(1); filter: brightness(1); }
+      50%  { transform: scale(1.01); filter: brightness(1.25); }
+      100% { transform: scale(1); filter: brightness(1); }
+    }
+
+    /* Bets chips */
+    .bets{ display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    .betNum{
+      min-width: 48px;
+      text-align:center;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(10,15,22,.75);
+      font-weight: 900;
+      font-size: 18px;
+      letter-spacing:.2px;
+      box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+    }
+    .betNum.hot{
+      border-color: rgba(0,209,255,.55);
+      box-shadow:
+        0 0 12px rgba(0,209,255,.20),
+        inset 0 0 0 1px rgba(0,0,0,.25);
+    }
+    .betNum.best{
+      border-color: rgba(255,0,255,.8);
+      box-shadow:
+        0 0 20px rgba(255,0,255,.4),
+        inset 0 0 0 1px rgba(0,0,0,.25);
+      animation: pulseBest 1s ease-in-out infinite;
+    }
+    @keyframes pulseBest{
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .betNum.red{ background: var(--red); color: white; }
+    .betNum.black{ background: var(--black); color: white; }
+    .betNum.green{ background: var(--green); color: white; }
+
+    /* Keypad: digits only, neon blue */
+    .kbd{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:12px;
+      max-width: 360px;
+      margin-top: 10px;
+    }
+    .kbd button{
+      padding:16px 0;
+      border-radius:18px;
+      font-size:22px;
+      font-weight: 900;
+      color: var(--neonWhite);
+      background:
+        radial-gradient(140% 140% at 30% 20%, rgba(0,209,255,.38), rgba(0,0,0,0) 58%),
+        rgba(0,163,255,.18);
+      border: 1px solid rgba(0,209,255,.65);
+      box-shadow:
+        0 0 16px rgba(0,209,255,.16),
+        inset 0 0 0 1px rgba(0,0,0,.35);
+      cursor:pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+      min-height: 56px;
+      user-select:none;
+    }
+    .kbd button:active{
+      transform: translateY(1px) scale(.99);
+      filter: brightness(1.25);
+      box-shadow:
+        0 0 22px rgba(0,209,255,.28),
+        inset 0 0 0 1px rgba(0,0,0,.35);
+    }
+
+    /* Active sets layout */
+    .predictionCard{
+      background: rgba(15,22,30,.85);
+      border-radius: 14px;
+      padding: 12px;
+      border:1px solid rgba(255,255,255,.10);
+      margin-bottom: 10px;
+    }
+    
+    .predictionCard.plus{
+      background: rgba(15,30,40,.85);
+      border:1px solid rgba(0,209,255,.30);
+    }
+    
+    .predictionCard.minus{
+      background: rgba(40,15,25,.85);
+      border:1px solid rgba(255,45,85,.30);
+    }
+    
+    .bestBetBox{
+      background: rgba(46,15,46,.9);
+      border-radius: 16px;
+      padding: 16px;
+      border:2px solid rgba(255,0,255,.5);
+      margin: 12px 0;
+      text-align: center;
+    }
+    .bestBetTitle{
+      font-size: 14px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+    }
+    .bestBetNumbers{
+      font-size: 32px;
+      font-weight: 900;
+      color: #ff00ff;
+      text-shadow: 0 0 20px rgba(255,0,255,.5);
+    }
+    
+    .history{
+      margin-top: 10px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    .historyItem{
+      display: flex;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+    }
+    .historyItem:last-child{ border-bottom: none; }
+    .spinNum{
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    .spinNum.red{ background: var(--red); }
+    .spinNum.black{ background: var(--black); }
+    .spinNum.green{ background: var(--green); }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <h1>Mirror Terminal ±1 Tool (Filtered)</h1>
+
+    <div class="grid">
+      <!-- Left / main -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted tiny">Last Input</div>
+            <div id="lastSpin" class="big">—</div>
+            <div id="lastMeta" class="muted tiny">Enter a number (0–36)</div>
+          </div>
+        </div>
+
+        <div id="hitBanner" class="hitBanner">
+          <div class="hitTitle">HIT!</div>
+          <div class="hitSub" id="hitSub">Current input matches a prediction.</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="spinBox">
+          <div class="inline">
+            <input id="spinInput" type="number" min="0" max="36" placeholder="Number (0–36)" inputmode="numeric" />
+            <button class="btn" id="clearBtn" type="button">Clear</button>
+          </div>
+          <button class="btn danger" id="resetBtn" type="button">Reset All</button>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="row">
+          <div class="pill" id="statusPill">Waiting…</div>
+          <div class="muted tiny" id="statusText">Enter first number.</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="muted tiny">BEST BET (Max 4 numbers)</div>
+        <div id="bestBetBox" class="bestBetBox" style="display:none;">
+          <div class="bestBetTitle">Bet These Numbers</div>
+          <div class="bestBetNumbers" id="bestBetNumbers">—</div>
+        </div>
+
+        <div class="muted tiny" style="margin-top:12px;">All Active Predictions</div>
+        <div id="activeSets" style="margin-top:8px;"></div>
+
+        <div class="muted tiny" style="margin-top:12px;">Combined numbers (all predictions)</div>
+        <div class="bets" id="combinedBets"></div>
+        
+        <div class="sep"></div>
+        <div class="muted tiny">Input History</div>
+        <div class="history" id="history"></div>
+      </div>
+
+      <!-- Right / keypad -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between;">
+          <div>
+            <div class="muted tiny">Keypad</div>
+            <div class="muted tiny">Tap digits</div>
+          </div>
+        </div>
+
+        <div class="kbd" id="kbd"></div>
+
+        <div class="sep"></div>
+        <div class="muted tiny" style="line-height: 1.6;">
+          <strong>Filter Logic:</strong><br>
+          1. Check for overlaps (same number in multiple predictions)<br>
+          2. If overlaps exist → bet those (max 4)<br>
+          3. If no overlaps → pick +1 from oldest prediction<br>
+          4. Always max 4 numbers
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // Mirror terminal pairs
+  const mirrorTerminal = { 0:5, 5:0, 1:6, 6:1, 2:7, 7:2, 3:8, 8:3, 4:9, 9:4 };
+
+  // Terminal groups
+  const terminalGroup = (t) => {
+    if (t === 0) return [0,10,20,30];
+    if (t === 7) return [7,17,27];
+    if (t === 8) return [8,18,28];
+    if (t === 9) return [9,19,29];
+    return [t, t+10, t+20, t+30].filter(n => n <= 36);
+  };
+
+  // Roulette colors
+  const getNumberColor = (n) => {
+    if (n === 0) return 'green';
+    const reds = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+    return reds.includes(n) ? 'red' : 'black';
+  };
+
+  // State
+  let inputs = [];
+  let predictions = [];
+
+  // DOM
+  const elLastSpin = document.getElementById('lastSpin');
+  const elLastMeta = document.getElementById('lastMeta');
+  const elSpinInput = document.getElementById('spinInput');
+  const elResetBtn = document.getElementById('resetBtn');
+  const elClearBtn = document.getElementById('clearBtn');
+  const elActiveSets = document.getElementById('activeSets');
+  const elCombinedBets = document.getElementById('combinedBets');
+  const elStatusPill = document.getElementById('statusPill');
+  const elStatusText = document.getElementById('statusText');
+  const elKbd = document.getElementById('kbd');
+  const elHistory = document.getElementById('history');
+  const elHitBanner = document.getElementById('hitBanner');
+  const elHitSub = document.getElementById('hitSub');
+  const elBestBetBox = document.getElementById('bestBetBox');
+  const elBestBetNumbers = document.getElementById('bestBetNumbers');
+
+  function calculatePredictions(fromInput) {
+    const t = (fromInput === 0) ? 0 : (fromInput % 10);
+    const mt = mirrorTerminal[t];
+    
+    const mtPlus = (mt + 1) % 10;
+    const mtMinus = (mt - 1 + 10) % 10;
+    
+    return [
+      { type: 'plus', label: '+1', t, mt, target: mtPlus, nums: terminalGroup(mtPlus) },
+      { type: 'minus', label: '-1', t, mt, target: mtMinus, nums: terminalGroup(mtMinus) }
+    ];
+  }
+
+  // FILTER: Get best 4 numbers to bet
+  function getBestBet() {
+    if (predictions.length === 0) return [];
+    
+    // Count occurrences of each number
+    const counts = {};
+    predictions.forEach(p => {
+      p.nums.forEach(n => {
+        counts[n] = (counts[n] || 0) + 1;
+      });
+    });
+    
+    // Sort by count (desc), then by number (asc)
+    const sorted = Object.entries(counts)
+      .map(([n, count]) => ({ n: parseInt(n), count }))
+      .sort((a, b) => b.count - a.count || a.n - b.n);
+    
+    // If we have overlaps (count > 1), take those first
+    const overlaps = sorted.filter(x => x.count > 1);
+    if (overlaps.length > 0) {
+      // Take up to 4 overlaps
+      return overlaps.slice(0, 4).map(x => x.n);
+    }
+    
+    // No overlaps: take +1 from oldest prediction (first in array)
+    const oldestPlus = predictions.find(p => p.type === 'plus');
+    if (oldestPlus) {
+      return oldestPlus.nums.slice(0, 4);
+    }
+    
+    // Fallback: take first 4 from any prediction
+    return predictions[0].nums.slice(0, 4);
+  }
+
+  function addInput(n){
+    if (!Number.isFinite(n) || n < 0 || n > 36) return;
+
+    // Check hits
+    let hit = false;
+    let hitPred = null;
+    for (const pred of predictions) {
+      if (pred.nums.includes(n)) {
+        hit = true;
+        hitPred = pred;
+        break;
+      }
+    }
+
+    inputs.push(n);
+    elSpinInput.value = '';
+
+    // Decrement and remove expired
+    predictions.forEach(p => p.spinsLeft--);
+    predictions = predictions.filter(p => p.spinsLeft > 0);
+
+    // Add new predictions
+    const newPreds = calculatePredictions(n);
+    newPreds.forEach(p => {
+      predictions.push({
+        id: Date.now() + Math.random(),
+        fromInput: n,
+        spinsLeft: 2,
+        ...p
+      });
+    });
+
+    render(hit, hitPred, n);
+  }
+
+  function resetAll(){
+    inputs = [];
+    predictions = [];
+    elSpinInput.value = '';
+    render(false, null, null);
+  }
+
+  function render(hit, hitPred, hitNumber){
+    const last = inputs.length ? inputs[inputs.length-1] : null;
+    const bestBet = getBestBet();
+
+    elLastSpin.textContent = (last === null) ? '—' : String(last);
+    
+    if (last === null) {
+      elLastMeta.textContent = 'Enter a number (0–36)';
+    } else {
+      elLastMeta.textContent = `Input ${last} | Best bet: ${bestBet.join(', ') || '—'}`;
+    }
+
+    // Hit banner
+    if (hit && hitPred) {
+      elHitBanner.className = 'hitBanner on';
+      elHitSub.textContent = `Input ${hitNumber} matches ${hitPred.label} from ${hitPred.fromInput}!`;
+    } else {
+      elHitBanner.className = 'hitBanner';
+    }
+
+    // Best bet display
+    if (bestBet.length > 0) {
+      elBestBetBox.style.display = 'block';
+      elBestBetNumbers.textContent = bestBet.join(' • ');
+    } else {
+      elBestBetBox.style.display = 'none';
+    }
+
+    // Status
+    if (!predictions.length) {
+      elStatusPill.className = 'pill';
+      elStatusPill.textContent = 'Waiting…';
+      elStatusText.textContent = 'Enter first number.';
+    } else {
+      const hitBest = bestBet.includes(hitNumber);
+      elStatusPill.className = (hit && hitBest) ? 'pill best' : hit ? 'pill good' : 'pill active';
+      elStatusPill.textContent = (hit && hitBest) ? 'BEST BET HIT!' : hit ? 'HIT!' : `${predictions.length} Active`;
+      elStatusText.textContent = `Best bet: ${bestBet.length} numbers`;
+    }
+
+    // All predictions
+    elActiveSets.innerHTML = '';
+    if (predictions.length === 0) {
+      elActiveSets.innerHTML = '<div class="muted tiny">No active predictions.</div>';
+    } else {
+      const bySource = {};
+      predictions.forEach(p => {
+        if (!bySource[p.fromInput]) bySource[p.fromInput] = [];
+        bySource[p.fromInput].push(p);
+      });
+      
+      Object.entries(bySource).forEach(([source, preds]) => {
+        const sourceBox = document.createElement('div');
+        sourceBox.className = 'setCard';
+        sourceBox.style.marginBottom = '10px';
+        
+        const title = document.createElement('div');
+        title.className = 'row';
+        title.innerHTML = `<span class="pill new">From ${source}</span>`;
+        sourceBox.appendChild(title);
+        
+        preds.forEach(p => {
+          const box = document.createElement('div');
+          box.className = `predictionCard ${p.type}`;
+          
+          const header = document.createElement('div');
+          header.className = 'row';
+          header.innerHTML = `
+            <span class="pill ${p.type}">${p.label}</span>
+            <span class="pill">${p.nums.join(', ')}</span>
+            <span class="pill spins-left">${p.spinsLeft} left</span>
+          `;
+          box.appendChild(header);
+          sourceBox.appendChild(box);
+        });
+        
+        elActiveSets.appendChild(sourceBox);
+      });
+    }
+
+    // Combined bets
+    elCombinedBets.innerHTML = '';
+    const combined = new Set();
+    predictions.forEach(p => p.nums.forEach(n => combined.add(n)));
+    
+    if (combined.size === 0) {
+      elCombinedBets.innerHTML = '<div class="muted tiny">Enter numbers to see predictions.</div>';
+    } else {
+      [...combined].sort((a,b)=>a-b).forEach(n => {
+        const isBest = bestBet.includes(n);
+        const d = document.createElement('div');
+        d.className = `betNum ${isBest ? 'best' : ''} ${getNumberColor(n)}`;
+        d.textContent = n;
+        elCombinedBets.appendChild(d);
+      });
+    }
+    
+    // History
+    elHistory.innerHTML = '';
+    [...inputs].reverse().forEach((n, idx) => {
+      const actualIdx = inputs.length - 1 - idx;
+      const item = document.createElement('div');
+      item.className = 'historyItem';
+      
+      let detailText = '';
+      if (actualIdx === 0) {
+        detailText = 'First input';
+      } else {
+        const prevInput = inputs[actualIdx - 1];
+        const prevPreds = calculatePredictions(prevInput);
+        const allPredNums = [...prevPreds[0].nums, ...prevPreds[1].nums];
+        const wasHit = allPredNums.includes(n);
+        detailText = wasHit ? '✓ HIT' : '✗ miss';
+      }
+      
+      item.innerHTML = `
+        <div class="spinNum ${getNumberColor(n)}">${n}</div>
+        <div style="flex:1;">
+          <div>#${actualIdx + 1} | ${detailText}</div>
+        </div>
+      `;
+      elHistory.appendChild(item);
+    });
+  }
+
+  // Keypad
+  function makeKeypad(){
+    const digits = [1,2,3,4,5,6,7,8,9,0];
+    elKbd.innerHTML = '';
+    digits.forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = String(v);
+      b.addEventListener('click', () => onDigitTap(v));
+      elKbd.appendChild(b);
+    });
+  }
+
+  let digitBuffer = '';
+  let commitTimer = null;
+  const COMMIT_MS = 420;
+
+  function clearCommitTimer(){
+    if (commitTimer) { clearTimeout(commitTimer); commitTimer = null; }
+  }
+
+  function commitBuffer(){
+    clearCommitTimer();
+    if (!digitBuffer) return;
+    const n = parseInt(digitBuffer, 10);
+    digitBuffer = '';
+    if (Number.isFinite(n) && n >= 0 && n <= 36) addInput(n);
+    else {
+      elSpinInput.value = '';
+      render(false, null, null);
+    }
+  }
+
+  function onDigitTap(d){
+    const next = (digitBuffer + String(d)).slice(0, 2);
+    digitBuffer = next;
+    elSpinInput.value = next;
+
+    const n = parseInt(next, 10);
+    if (!Number.isFinite(n)) return;
+
+    if (next.length === 2) {
+      commitBuffer();
+      return;
+    }
+
+    if (n >= 4) {
+      clearCommitTimer();
+      commitTimer = setTimeout(commitBuffer, 160);
+    } else {
+      scheduleCommit();
+    }
+  }
+
+  elResetBtn.addEventListener('click', () => { clearCommitTimer(); digitBuffer=''; resetAll(); });
+  elClearBtn.addEventListener('click', () => { clearCommitTimer(); digitBuffer=''; elSpinInput.value=''; elSpinInput.focus(); });
+  elSpinInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { clearCommitTimer(); digitBuffer=''; addInput(parseInt(elSpinInput.value, 10)); }
+  });
+
+  makeKeypad();
+  render(false, null, null);
+})();
+</script>
+</body>
+</html>
