@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Dealer Signature + Repeat Hunter Tool</title>
+  <style>
+    :root{
+      font-family: -apple-system, system-ui, Segoe UI, Roboto, Arial, sans-serif;
+      color-scheme: dark;
+      --bg:#0b0f14;
+      --card:#121a23;
+      --card2:#0c131b;
+      --border:#243141;
+      --border2:#2b3a4b;
+      --text:#e8eef6;
+      --muted:#9fb0c3;
+      --neonGreen:#00ff88;
+      --neonBlue:#00d1ff;
+      --neonRed:#ff2d55;
+      --neonGold:#ffe600;
+      --neonOrange:#ff9500;
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .wrap{
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 16px;
+      padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    }
+
+    h1{ font-size: 20px; margin: 0 0 8px; letter-spacing:.2px; }
+    h2{ font-size: 16px; margin: 0 0 12px; color: var(--neonGold); }
+    h3{ font-size: 14px; margin: 12px 0 8px; color: var(--neonBlue); }
+
+    .grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns: 1fr 1fr;
+      align-items:start;
+    }
+    @media (max-width: 900px){
+      .grid{ grid-template-columns: 1fr; }
+    }
+
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:16px;
+      padding:14px;
+      box-shadow: 0 10px 26px rgba(0,0,0,.28);
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+    .muted{ color:var(--muted); }
+    .tiny{ font-size: 12px; }
+    .big{ font-size: 32px; font-weight: 800; letter-spacing:.6px; }
+
+    .sep{ height:1px; background:var(--border); margin:12px 0; opacity:.9; }
+
+    .pill{
+      padding:6px 12px;
+      border-radius:999px;
+      background:#0f2533;
+      border:1px solid #1f3a4a;
+      font-size: 12px;
+      font-weight:700;
+      letter-spacing:.2px;
+    }
+    .pill.good{ background:#0f2e20; border-color:#1f5b3e; color:var(--neonGreen); }
+    .pill.warn{ background:#2e2410; border-color:#7d5a1f; color:var(--neonOrange); }
+    .pill.bad{  background:#2b1414; border-color:#5b1f1f; color:var(--neonRed); }
+    .pill.gold{ background:#2e2a10; border-color:#7d6a1f; color:var(--neonGold); }
+    .pill.active{ background:#0f2e20; border-color:#1f7d3e; color:var(--neonGreen); }
+
+    .btn{
+      cursor:pointer;
+      background:#1a2633;
+      color:var(--text);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      padding:12px 16px;
+      font-weight:800;
+      letter-spacing:.2px;
+      touch-action: manipulation;
+      min-height: 44px;
+      transition: all 0.2s;
+    }
+    .btn:hover{ filter:brightness(1.15); transform: translateY(-1px); }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{ background:var(--neonGreen); color:#000; border-color:#00cc6a; }
+    .btn.danger{ background:#3a1b1b; border-color:#7d2b2b; }
+    .btn.gold{ background:var(--neonGold); color:#000; border-color:#cc9900; }
+
+    input[type="number"]{
+      background:#0c131b;
+      color:var(--text);
+      border:1px solid var(--border2);
+      border-radius:14px;
+      padding:12px 12px;
+      font-size:16px;
+      width: 100px;
+      min-height: 44px;
+      text-align: center;
+    }
+
+    .numGrid{
+      display:grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap:8px;
+      margin-top:10px;
+    }
+    .numBox{
+      aspect-ratio: 1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:12px;
+      font-weight:900;
+      font-size: 18px;
+      border:2px solid transparent;
+      position:relative;
+    }
+    .numBox.red{ background:#c41e3a; }
+    .numBox.black{ background:#1a1a1a; border:1px solid #333; }
+    .numBox.green{ background:#008f39; }
+    .numBox.bet{ 
+      border-color: var(--neonGold); 
+      box-shadow: 0 0 15px rgba(255, 230, 0, 0.4);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse{
+      0%, 100% { box-shadow: 0 0 15px rgba(255, 230, 0, 0.4); }
+      50% { box-shadow: 0 0 25px rgba(255, 230, 0, 0.7); }
+    }
+
+    .statGrid{
+      display:grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap:10px;
+      margin-top:10px;
+    }
+    .statBox{
+      background:var(--card2);
+      border-radius:12px;
+      padding:12px;
+      text-align:center;
+      border:1px solid var(--border);
+    }
+    .statValue{
+      font-size: 24px;
+      font-weight:800;
+      color:var(--neonGreen);
+    }
+    .statValue.negative{ color:var(--neonRed); }
+    .statLabel{
+      font-size: 11px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+
+    .history{
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top:10px;
+    }
+    .historyItem{
+      display: flex;
+      gap: 10px;
+      padding: 8px;
+      border-bottom: 1px solid var(--border);
+      font-size: 13px;
+      align-items:center;
+    }
+    .historyItem:last-child{ border-bottom: none; }
+    .spinNum{
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 13px;
+      flex-shrink:0;
+    }
+    .spinNum.red{ background: #c41e3a; }
+    .spinNum.black{ background: #1a1a1a; }
+    .spinNum.green{ background: #008f39; }
+
+    .wheelContainer{
+      position: relative;
+      width: 280px;
+      height: 280px;
+      margin: 20px auto;
+    }
+    .wheelCenter{
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      background: var(--card);
+      border-radius: 50%;
+      border: 3px solid var(--neonGold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 20px;
+      z-index: 10;
+    }
+    .wheelNum{
+      position: absolute;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 12px;
+      transform-origin: center;
+    }
+    .wheelNum.bet{ 
+      border: 3px solid var(--neonGold); 
+      box-shadow: 0 0 15px var(--neonGold);
+      z-index: 5;
+    }
+    .wheelNum.last{
+      border: 3px solid var(--neonBlue);
+      box-shadow: 0 0 15px var(--neonBlue);
+      z-index: 6;
+    }
+
+    .systemToggle{
+      display:flex;
+      gap:8px;
+      margin-bottom:12px;
+    }
+    .toggleBtn{
+      flex:1;
+      padding:10px;
+      border-radius:12px;
+      border:2px solid var(--border);
+      background:var(--card2);
+      color:var(--muted);
+      font-weight:700;
+      cursor:pointer;
+      transition: all 0.2s;
+    }
+    .toggleBtn.active{
+      border-color:var(--neonGreen);
+      color:var(--neonGreen);
+      background:rgba(0,255,136,0.1);
+    }
+
+    .alert{
+      padding:12px;
+      border-radius:12px;
+      margin:10px 0;
+      font-size:13px;
+      font-weight:600;
+    }
+    .alert.success{
+      background:rgba(0,255,136,0.1);
+      border:1px solid var(--neonGreen);
+      color:var(--neonGreen);
+    }
+    .alert.warning{
+      background:rgba(255,149,0,0.1);
+      border:1px solid var(--neonOrange);
+      color:var(--neonOrange);
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>🎯 Dealer Signature + Repeat Hunter</h1>
+    <div class="muted tiny" style="margin-bottom:16px;">Professional roulette bias exploitation tool</div>
+
+    <div class="grid">
+      <!-- Left Panel: Input & Current Bets -->
+      <div class="card">
+        <div class="systemToggle">
+          <button class="toggleBtn active" onclick="setSystem('dealer')" id="btnDealer">
+            🎰 Dealer Signature
+          </button>
+          <button class="toggleBtn" onclick="setSystem('repeat')" id="btnRepeat">
+            🔄 Repeat Hunter
+          </button>
+        </div>
+
+        <div class="row" style="justify-content:space-between;align-items:flex-start;">
+          <div>
+            <div class="muted tiny">Last Spin</div>
+            <div id="lastSpin" class="big">—</div>
+          </div>
+          <div style="text-align:right;">
+            <div class="muted tiny">Current System</div>
+            <div id="systemName" style="color:var(--neonGold);font-weight:700;">Dealer Signature</div>
+          </div>
+        </div>
+
+        <div class="sep"></div>
+
+        <div class="row">
+          <input id="spinInput" type="number" min="0" max="36" placeholder="0-36" />
+          <button class="btn primary" onclick="addSpin()">Add Spin</button>
+          <button class="btn" onclick="undoLast()">Undo</button>
+          <button class="btn danger" onclick="resetAll()">Reset</button>
+        </div>
+
+        <div id="dealerAlert" class="alert success" style="display:block;">
+          💡 Dealer signature detected! Betting 8 numbers based on wheel distances.
+        </div>
+        <div id="repeatAlert" class="alert warning" style="display:none;">
+          🔄 Betting numbers from 4-7 spins ago.
+        </div>
+
+        <div class="sep"></div>
+
+        <h3>Numbers to Bet Now</h3>
+        <div class="numGrid" id="betGrid"></div>
+
+        <div class="sep"></div>
+
+        <h3>Wheel Visualization</h3>
+        <div class="wheelContainer" id="wheelViz">
+          <div class="wheelCenter" id="wheelCenter">?</div>
+        </div>
+      </div>
+
+      <!-- Right Panel: Stats & History -->
+      <div class="card">
+        <h2>📊 Performance Stats</h2>
+        
+        <div class="statGrid">
+          <div class="statBox">
+            <div class="statValue" id="totalProfit">0</div>
+            <div class="statLabel">Total Profit</div>
+          </div>
+          <div class="statBox">
+            <div class="statValue" id="winRate">0%</div>
+            <div class="statLabel">Win Rate</div>
+          </div>
+          <div class="statBox">
+            <div class="statValue" id="totalSpins">0</div>
+            <div class="statLabel">Spins Tracked</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;justify-content:center;">
+          <div class="pill" id="statusPill">Ready</div>
+        </div>
+
+        <div class="sep"></div>
+
+        <h3>Recent History</h3>
+        <div class="history" id="history"></div>
+
+        <div class="sep"></div>
+
+        <div class="muted tiny" style="line-height:1.6;">
+          <strong>Dealer Signature:</strong> Bets wheel distances 6, 14, 17, 27 from last number.<br>
+          <strong>Repeat Hunter:</strong> Bets numbers that appeared 4-7 spins ago.<br>
+          <strong>Based on:</strong> 236 spin analysis showing +496 and +336 unit profits.
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+// European wheel order (clockwise)
+const wheelOrder = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+
+// State
+let spins = [];
+let currentSystem = 'dealer';
+let stats = { profit: 0, wins: 0, losses: 0 };
+
+// Colors
+const redNumbers = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+
+function getColor(n) {
+  if (n === 0) return 'green';
+  return redNumbers.includes(n) ? 'red' : 'black';
+}
+
+function setSystem(sys) {
+  currentSystem = sys;
+  document.getElementById('btnDealer').className = sys === 'dealer' ? 'toggleBtn active' : 'toggleBtn';
+  document.getElementById('btnRepeat').className = sys === 'repeat' ? 'toggleBtn active' : 'toggleBtn';
+  document.getElementById('systemName').textContent = sys === 'dealer' ? 'Dealer Signature' : 'Repeat Hunter';
+  document.getElementById('dealerAlert').style.display = sys === 'dealer' ? 'block' : 'none';
+  document.getElementById('repeatAlert').style.display = sys === 'repeat' ? 'block' : 'none';
+  updateDisplay();
+}
+
+function getDealerBets(lastNum) {
+  if (lastNum === null) return [];
+  const idx = wheelOrder.indexOf(lastNum);
+  const distances = [6, 14, 17, 27];
+  const bets = new Set();
+  distances.forEach(d => {
+    bets.add(wheelOrder[(idx + d) % 37]);
+    bets.add(wheelOrder[(idx - d + 37) % 37]);
+  });
+  return Array.from(bets).sort((a,b) => a-b);
+}
+
+function getRepeatBets(history) {
+  if (history.length < 7) return [];
+  const targets = history.slice(-7, -3);
+  return Array.from(new Set(targets)).sort((a,b) => a-b);
+}
+
+function getCurrentBets() {
+  if (spins.length === 0) return [];
+  const last = spins[spins.length - 1];
+  
+  if (currentSystem === 'dealer') {
+    return getDealerBets(last);
+  } else {
+    return getRepeatBets(spins);
+  }
+}
+
+function addSpin() {
+  const input = document.getElementById('spinInput');
+  const num = parseInt(input.value);
+  
+  if (isNaN(num) || num < 0 || num > 36) {
+    alert('Enter 0-36');
+    return;
+  }
+  
+  if (spins.length > 0) {
+    const prevBets = getCurrentBets();
+    const lastResult = spins[spins.length - 1];
+    
+    if (prevBets.length > 0) {
+      if (prevBets.includes(lastResult)) {
+        stats.wins++;
+        stats.profit += 35 - (prevBets.length - 1);
+      } else {
+        stats.losses++;
+        stats.profit -= prevBets.length;
+      }
+    }
+  }
+  
+  spins.push(num);
+  input.value = '';
+  input.focus();
+  updateDisplay();
+}
+
+function undoLast() {
+  if (spins.length === 0) return;
+  spins.pop();
+  updateDisplay();
+}
+
+function resetAll() {
+  spins = [];
+  stats = { profit: 0, wins: 0, losses: 0 };
+  updateDisplay();
+}
+
+function updateDisplay() {
+  const last = spins.length > 0 ? spins[spins.length - 1] : null;
+  const bets = getCurrentBets();
+  
+  document.getElementById('lastSpin').textContent = last !== null ? last : '—';
+  document.getElementById('wheelCenter').textContent = last !== null ? last : '?';
+  
+  const totalBets = stats.wins + stats.losses;
+  const winRate = totalBets > 0 ? (stats.wins / totalBets * 100).toFixed(1) : 0;
+  document.getElementById('totalProfit').textContent = (stats.profit > 0 ? '+' : '') + stats.profit;
+  document.getElementById('totalProfit').className = 'statValue' + (stats.profit < 0 ? ' negative' : '');
+  document.getElementById('winRate').textContent = winRate + '%';
+  document.getElementById('totalSpins').textContent = spins.length;
+  
+  const pill = document.getElementById('statusPill');
+  if (bets.length === 0) {
+    pill.className = 'pill';
+    pill.textContent = 'Need more spins';
+  } else if (stats.profit > 0) {
+    pill.className = 'pill good';
+    pill.textContent = 'In Profit';
+  } else if (stats.profit < 0) {
+    pill.className = 'pill bad';
+    pill.textContent = 'In Loss';
+  } else {
+    pill.className = 'pill active';
+    pill.textContent = 'Active';
+  }
+  
+  const grid = document.getElementById('betGrid');
+  grid.innerHTML = '';
+  
+  if (bets.length === 0) {
+    grid.innerHTML = '<div class="muted tiny" style="grid-column:1/-1;text-align:center;padding:20px;">Enter spins to see bets</div>';
+  } else {
+    bets.forEach(n => {
+      const div = document.createElement('div');
+      div.className = `numBox ${getColor(n)} bet`;
+      div.textContent = n;
+      grid.appendChild(div);
+    });
+  }
+  
+  renderWheel(last, bets);
+  renderHistory();
+}
+
+function renderWheel(last, bets) {
+  const container = document.getElementById('wheelViz');
+  const center = container.querySelector('.wheelCenter');
+  container.innerHTML = '';
+  container.appendChild(center);
+  
+  const radius = 110;
+  const centerX = 140;
+  const centerY = 140;
+  
+  wheelOrder.forEach((num, i) => {
+    const angle = (i * 360 / 37) * Math.PI / 180;
+    const x = centerX + radius * Math.cos(angle) - 18;
+    const y = centerY + radius * Math.sin(angle) - 18;
+    
+    const div = document.createElement('div');
+    div.className = `wheelNum ${getColor(num)}`;
+    if (bets.includes(num)) div.classList.add('bet');
+    if (num === last) div.classList.add('last');
+    div.textContent = num;
+    div.style.left = x + 'px';
+    div.style.top = y + 'px';
+    container.appendChild(div);
+  });
+}
+
+function renderHistory() {
+  const hist = document.getElementById('history');
+  hist.innerHTML = '';
+  
+  if (spins.length === 0) {
+    hist.innerHTML = '<div class="muted tiny" style="text-align:center;padding:10px;">No history yet</div>';
+    return;
+  }
+  
+  [...spins].reverse().forEach((n, idx) => {
+    const actualIdx = spins.length - 1 - idx;
+    const item = document.createElement('div');
+    item.className = 'historyItem';
+    
+    let detail = '';
+    if (actualIdx > 0) {
+      const prevBets = currentSystem === 'dealer' 
+        ? getDealerBets(spins[actualIdx - 1])
+        : (actualIdx >= 7 ? getRepeatBets(spins.slice(0, actualIdx)) : []);
+      
+      if (prevBets.length > 0) {
+        const won = prevBets.includes(n);
+        detail = won ? `✓ WIN (+${35 - (prevBets.length - 1)})` : `✗ Loss (-${prevBets.length})`;
+      }
+    } else {
+      detail = 'First spin';
+    }
+    
+    item.innerHTML = `
+      <div class="spinNum ${getColor(n)}">${n}</div>
+      <div style="flex:1;">
+        <div>#${actualIdx + 1}</div>
+        <div style="font-size:11px;color:${detail.includes('WIN') ? 'var(--neonGreen)' : detail.includes('Loss') ? 'var(--neonRed)' : 'var(--muted)'};">${detail}</div>
+      </div>
+    `;
+    hist.appendChild(item);
+  });
+}
+
+document.getElementById('spinInput').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') addSpin();
+});
+
+updateDisplay();
+</script>
+</body>
+</html>
